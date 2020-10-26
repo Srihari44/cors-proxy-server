@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 //URL Validation
 const validURL = (str) => {
   const pattern = new RegExp(
-    "^(https?:\\/\\/)?" + // protocol
+    "^((http|https|ftp)?:\\/\\/)?" + // protocol
       "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
       "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
       "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
@@ -15,9 +15,8 @@ const validURL = (str) => {
       "(\\#[-a-z\\d_]*)?$",
     "i"
   ); // fragment locator
-  return !!pattern.test(str);
+  return !!pattern.test(str)
 };
-
 //Include CORS header in response with middleware
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -25,7 +24,12 @@ app.use((req, res, next) => {
 });
 
 app.get("/*", (req, res) => {
-  if (validURL(req.params[0])) {
+  const origin = req.headers.origin;
+  const protocols = ["http://", "https://", "ftp://"];
+  if (
+    validURL(req.params[0]) &&
+    protocols.map((p) => req.params[0].startsWith(p)).includes(true)
+  ) {
     const queryStr =
       Object.keys(req.query).length > 0
         ? "?" + new URLSearchParams(req.query).toString()
@@ -38,36 +42,46 @@ app.get("/*", (req, res) => {
         const responseData = {
           status: response.status,
           statusText: response.statusText,
+          headers: response.headers,
           config: {
             url: response.config.url,
             method: response.config.method,
-            headers: response.config.headers,
           },
           data: response.data,
         };
-        res.json(responseData);
+        responseData.headers["content-type"].startsWith("text/html")
+          ? res.send(responseData.data)
+          : !origin
+          ? res.send(
+              `<pre><code>${JSON.stringify(responseData, null, 4)}</code></pre>`
+            )
+          : res.json(responseData);
       })
       .catch((err) => {
-          const errData = {
-              name: err.name,
-              message: err.message,
-              config: {
-                  url: err.config.url,
-                  method: err.config.method,
-                  headers: err.config.headers,
-              }
-          }
-        res.json(errData);
+        const errData = {
+          name: err.name,
+          message: err.message,
+          config: {
+            url: err.config.url,
+            method: err.config.method,
+          },
+        };
+        !origin
+          ? res.send(
+              `<pre><code>${JSON.stringify(errData, null, 4)}</code></pre>`
+            )
+          : res.json(errData);
       });
   } else {
-    res.json({
+    const errData = {
       name: "Error",
       message: "Not a valid URL",
-      config: {
-        url: req.url,
-        method: req.method,
-      },
-    });
+      url: req.url,
+    };
+
+    !origin
+      ? res.send(`<pre><code>${JSON.stringify(errData, null, 4)}</code></pre>`)
+      : res.json(errData);
   }
 });
 
