@@ -6,13 +6,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set("view engine", "ejs");
-app.use("/static", express.static("public"));
+app.use(express.static(__dirname + "/public"));
 //Include CORS header in response with middleware
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   next();
 });
-
+app.get("/", (req, res) => { res.render('index', { title: false, data: false, helptext: true})})
 app.get("/*", (req, res) => {
   const origin = req.headers.origin;
   const fullUrl = req.protocol + "://" + req.get("host") + req.originalUrl;
@@ -29,15 +29,21 @@ app.get("/*", (req, res) => {
         const responseData = {
           status: response.status,
           statusText: response.statusText,
-          headers: response.headers,
+          headers: {
+            date: response.headers.date,
+            "content-type": response.headers["content-type"],
+            connection: response.headers.connection,
+            "x-powered-by": response.headers["x-powered-by"],
+            server: response.headers.server,
+          },
           config: {
             url: response.config.url,
             method: response.config.method,
           },
           data: response.data,
         };
-        let headers = responseData.headers["content-type"];
-        if (headers.startsWith("text/html")) {
+        let CTheaders = responseData.headers["content-type"];
+        if (CTheaders.startsWith("text/html")) {
           const $ = cheerio.load(responseData.data);
           $("[href]").each(function () {
             let mHref = /^https?:\/\//i.test($(this).attr("href"))
@@ -46,7 +52,7 @@ app.get("/*", (req, res) => {
                 req.get("host") +
                 "/" +
                 $(this).attr("href")
-              : fullUrl + $(this).attr("href");
+              : fullUrl + '/' + $(this).attr("href");
             $(this).attr("href", mHref);
           });
           $("[src]").each(function () {
@@ -56,20 +62,26 @@ app.get("/*", (req, res) => {
                 req.get("host") +
                 "/" +
                 $(this).attr("src")
-              : fullUrl + $(this).attr("src");
+              : fullUrl + "/" + $(this).attr("src");
             $(this).attr("src", mSrc);
           });
           res.send($.html());
-        } else if (headers.startsWith("application/json")) {
+        } else if (CTheaders.startsWith("application/json")) {
           !origin
             ? res.render("index", {
-                title: url.replace("https://", ""),
-                data: JSON.stringify(responseData, null, 4),
+                title: "JSON Results for: " + url.replace("https://", ""),
+                data: JSON.stringify(responseData, null, 2),
+                helptext: ''
               })
             : res.json(responseData);
         } else {
-            res.setHeader("content-type", responseData.headers["content-type"]);
-            res.send(responseData.data);
+          res.setHeader("Content-Type", CTheaders);
+          if (CTheaders.startsWith('application')) {
+           res.send(response.data); 
+          }
+          else {
+            res.redirect(url)
+          }
         }
       })
       .catch((err) => {
@@ -79,20 +91,23 @@ app.get("/*", (req, res) => {
         };
         !origin
           ? res.render("index", {
-              title: url.replace("https://", ""),
-              data: JSON.stringify(errData, null, 4),
+              title:
+                "Error occured while fetching: " + url.replace("https://", ""),
+              data: JSON.stringify(errData, null,2),
+              helptext: ''
             })
           : res.json(errData);
       });
   } else {
     const errData = {
-      name: "Error",
-      message: "Not a valid URL",
+      message: "Not a valid URL. Check Your URL",
     };
 
     !origin
       ? res.render("index", {
-          data: JSON.stringify(errData, null, 4),
+          title: "ERROR",
+          data: JSON.stringify(errData, null, 2),
+          helptext: ''
         })
       : res.json(errData);
   }

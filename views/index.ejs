@@ -1,14 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CORS Proxy Response</title>
-</head>
-<body>
-    <h3>JSON results</h3>
-    <pre>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <title>CORS Proxy Server</title>
+  </head>
+  <body>
+    <h3 class="header">CORS Proxy Server</h3>
+    <%if (title) { %>
+    <h5 class="sub-header"><%= title %></h5>
+    <%} %> <%if (helptext) { %>
+    <div class="helptext">
+      <p>
+        JSON results will be displayed here... But wait, Did I mention that you
+        can use this site as proxy site too?
+      </p>
+      <p>Append a URL with this site to continue as JSON or proxy service</p>
+    </div>
+    <% } %> <%if (data) { %>
+    <div class="data-container">
+      <pre>
         <%= data %>
-    </pre>
-</body>
+    </pre
+      >
+    </div>
+    <% } %>
+  </body>
 </html>

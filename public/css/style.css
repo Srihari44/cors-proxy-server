@@ -1,0 +1,22 @@
+body{
+    background-color: #eee;
+    font-family:  sans-serif;
+    margin: 10px;
+}
+
+.header{
+    text-align: center;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #bbb;
+}
+
+.helptext{
+    padding-left: 10px;
+    padding-right: 10px;
+}
+.data-container{
+    max-height: 80vh;
+    max-width: 100%;
+    overflow: scroll;
+    background-color: rgba(0, 0, 0, 0.3);
+}
