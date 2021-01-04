@@ -12,10 +12,18 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   next();
 });
-app.get("/", (req, res) => { res.render('index', { title: false, data: false, helptext: true})})
+
+app.get("/", (req, res) => {
+  res.render("index", { title: false, data: false, helptext: true });
+});
+
 app.get("/*", (req, res) => {
   const origin = req.headers.origin;
-  const fullUrl = req.protocol + "://" + req.get("host") + req.originalUrl;
+  const fullUrl =
+    req.protocol + "://" + req.get("host") + req.originalUrl.endsWith("/")
+      ? req.originalUrl
+      : req.originalUrl + "/";
+
   if (validUrl.isWebUri(req.params[0])) {
     const queryStr =
       Object.keys(req.query).length > 0
@@ -46,41 +54,61 @@ app.get("/*", (req, res) => {
         if (CTheaders.startsWith("text/html")) {
           const $ = cheerio.load(responseData.data);
           $("[href]").each(function () {
-            let mHref = /^https?:\/\//i.test($(this).attr("href"))
-              ? req.protocol +
-                "://" +
-                req.get("host") +
-                "/" +
-                $(this).attr("href")
-              : fullUrl + '/' + $(this).attr("href");
-            $(this).attr("href", mHref);
+            if (!$(this).attr("href").startsWith(fullUrl)) {
+              let mHref = /^https?:\/\//i.test($(this).attr("href"))
+                ? req.protocol +
+                  "://" +
+                  req.get("host") +
+                  "/" +
+                  $(this).attr("href")
+                : fullUrl + $(this).attr("href");
+              $(this).attr("href", mHref);
+            }
           });
+
           $("[src]").each(function () {
-            let mSrc = /^https?:\/\//i.test($(this).attr("src"))
-              ? req.protocol +
-                "://" +
-                req.get("host") +
-                "/" +
-                $(this).attr("src")
-              : fullUrl + "/" + $(this).attr("src");
-            $(this).attr("src", mSrc);
+            if (!$(this).attr("src").startsWith(fullUrl)) {
+              let mSrc = /^https?:\/\//i.test($(this).attr("src"))
+                ? req.protocol +
+                  "://" +
+                  req.get("host") +
+                  "/" +
+                  $(this).attr("src")
+                : fullUrl + $(this).attr("src");
+              $(this).attr("src", mSrc);
+            }
           });
+
+          $("[action]").each(function () {
+            if (!$(this).attr("action").startsWith(fullUrl)) {
+              let mAction = /^https?:\/\//i.test($(this).attr("action"))
+                ? req.protocol +
+                  "://" +
+                  req.get("host") +
+                  "/" +
+                  $(this).attr("action")
+                : fullUrl + $(this).attr("action");
+              $(this).attr("action", mAction);
+            }
+          });
+
           res.send($.html());
         } else if (CTheaders.startsWith("application/json")) {
           !origin
             ? res.render("index", {
                 title: "JSON Results for: " + url.replace("https://", ""),
                 data: JSON.stringify(responseData, null, 2),
-                helptext: ''
+                helptext: "",
               })
             : res.json(responseData);
         } else {
           res.setHeader("Content-Type", CTheaders);
-          if (CTheaders.startsWith('application')) {
-           res.send(response.data); 
-          }
-          else {
-            res.redirect(url)
+          if (CTheaders.startsWith("application")) {
+            res.send(response.data);
+          } else {
+            axios.get(url, { responseType: "arraybuffer" }).then((buffRes) => {
+              res.send(buffRes.data);
+            });
           }
         }
       })
@@ -93,8 +121,8 @@ app.get("/*", (req, res) => {
           ? res.render("index", {
               title:
                 "Error occured while fetching: " + url.replace("https://", ""),
-              data: JSON.stringify(errData, null,2),
-              helptext: ''
+              data: JSON.stringify(errData, null, 2),
+              helptext: "",
             })
           : res.json(errData);
       });
@@ -107,7 +135,7 @@ app.get("/*", (req, res) => {
       ? res.render("index", {
           title: "ERROR",
           data: JSON.stringify(errData, null, 2),
-          helptext: ''
+          helptext: "",
         })
       : res.json(errData);
   }
