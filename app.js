@@ -91,13 +91,13 @@ app.get("/*", (req, res) => {
           message: err.message,
         };
         !origin
-          ? res.status(err.response?.status || 404).render("index", {
+          ? res.status(err.response? err.response.status : 404).render("index", {
               title:
                 "Error occured while fetching: " + url.replace("https://", ""),
               data: JSON.stringify(errData, null, 2),
               helptext: "",
             })
-          : res.status(err.response?.status || 404).json(errData);
+          : res.status(err.response? err.response.status : 404).json(errData);
       });
   } else {
     const errData = {
