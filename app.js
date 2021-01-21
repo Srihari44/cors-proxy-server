@@ -2,6 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const validUrl = require("valid-url");
 const cheerio = require("cheerio");
+const { response } = require("express");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -90,13 +91,13 @@ app.get("/*", (req, res) => {
           message: err.message,
         };
         !origin
-          ? res.render("index", {
+          ? res.status(err.response?.status || 404).render("index", {
               title:
                 "Error occured while fetching: " + url.replace("https://", ""),
-              data: JSON.stringify(errData, null,2),
-              helptext: ''
+              data: JSON.stringify(errData, null, 2),
+              helptext: "",
             })
-          : res.json(errData);
+          : res.status(err.response?.status || 404).json(errData);
       });
   } else {
     const errData = {
@@ -104,12 +105,12 @@ app.get("/*", (req, res) => {
     };
 
     !origin
-      ? res.render("index", {
+      ? res.status(400).render("index", {
           title: "ERROR",
           data: JSON.stringify(errData, null, 2),
-          helptext: ''
+          helptext: "",
         })
-      : res.json(errData);
+      : res.status(400).json(errData);
   }
 });
 
